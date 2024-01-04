@@ -1,2 +1,2 @@
-fastapi==0.75.0
-redis-om==0.0.20
+fastapi==0.108.0
+redis-om==0.2.1

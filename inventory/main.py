@@ -1,20 +1,22 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from redis_om import get_redis_connection, HashModel
+from os import getenv
+from typing import Callable
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['http://localhost:3000'],
+    allow_origins=getenv("ALLOWED_ORIGIN").split(","),
     allow_methods=['*'],
     allow_headers=['*']
 )
 
 redis = get_redis_connection(
-    host="redis-11844.c135.eu-central-1-1.ec2.cloud.redislabs.com",
-    port=11844,
-    password="pRdcpRkKPFn6UnEFskrDGxrmFbf5T9ER",
+    host=getenv("REDIS_HOST"),
+    port=getenv("REDIS_PORT"),
+    password=getenv("REDIS_PASSWORD"),
     decode_responses=True
 )
 
@@ -29,23 +31,13 @@ class Product(HashModel):
 
 
 @app.get('/products')
-def all():
+def all() -> list[Product]:
     return [format(pk) for pk in Product.all_pks()]
 
-
-def format(pk: str):
-    product = Product.get(pk)
-
-    return {
-        'id': product.pk,
-        'name': product.name,
-        'price': product.price,
-        'quantity': product.quantity
-    }
-
+format:  Callable[[str], Product]  = lambda pk : Product.get(pk)
 
 @app.post('/products')
-def create(product: Product):
+def create(product: Product) -> Product:
     return product.save()
 
 
@@ -55,5 +47,5 @@ def get(pk: str):
 
 
 @app.delete('/products/{pk}')
-def delete(pk: str):
+def delete(pk: str) -> int:
     return Product.delete(pk)

@@ -1,0 +1,47 @@
+version: '3'
+
+services:
+  inventory:
+    image: python:3.9-slim-bullseye
+    env_file: .env.dev
+    volumes:
+      - ./inventory:/app
+      - ./.cache/inventory:/root/.cache/pip
+    user: ${UID}:${GID}  # non root
+
+  payment:
+    image: python:3.9-slim-bullseye
+    env_file: .env.dev
+    volumes:
+      - ./inventory:/app
+      - ./.cache/payment:/root/.cache/pip
+    user: ${UID}:${GID}  # non root
+
+  frontend:
+    image: node:20-bullseye-slim
+    volumes:
+      - ./inventory-frontend:/app
+    user: ${UID}:${GID}  # non root
+    working_dir: /app
+    entrypoint: ["npm", "start"]
+
+  redis:
+    image: redis/redis-stack:7.2.0-v6 # Has the necessary modules, and a Web UI
+    env_file: .env.dev  # $REDIS_PASSWORD
+    environment:
+      REDIS_ARGS: --requirepass $$REDIS_PASSWORD
+    volumes:
+      - redis:/data
+
+  traefik:  # For Service Registry and API Gateway, 
+    image: traefik:v2.10
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+      - --providers.docker=true  # Use Docker Services
+      - --api.insecure=true  # Disable TLS
+    ports:
+      - "80:80"  # The HTTP port
+      - "8080:8080"  # The Web UI (enabled by --api.insecure=true)
+volumes:
+  redis: {}  

@@ -4,24 +4,23 @@ from fastapi.background import BackgroundTasks
 from redis_om import get_redis_connection, HashModel
 from starlette.requests import Request
 import requests, time
+from os import getenv
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['http://localhost:3000'],
+    allow_origins=getenv("ALLOWED_ORIGIN").split(","),
     allow_methods=['*'],
     allow_headers=['*']
 )
 
-# This should be a different database
 redis = get_redis_connection(
-    host="redis-11844.c135.eu-central-1-1.ec2.cloud.redislabs.com",
-    port=11844,
-    password="pRdcpRkKPFn6UnEFskrDGxrmFbf5T9ER",
+    host=getenv("REDIS_HOST"),
+    port=getenv("REDIS_PORT"),
+    password=getenv("REDIS_PASSWORD"),
     decode_responses=True
 )
-
 
 class Order(HashModel):
     product_id: str
@@ -36,12 +35,12 @@ class Order(HashModel):
 
 
 @app.get('/orders/{pk}')
-def get(pk: str):
+def get(pk: str) ->  Order:
     return Order.get(pk)
 
 
 @app.post('/orders')
-async def create(request: Request, background_tasks: BackgroundTasks):  # id, quantity
+async def create(request: Request, background_tasks: BackgroundTasks) -> Order:  # id, quantity
     body = await request.json()
 
     req = requests.get('http://localhost:8000/products/%s' % body['id'])
